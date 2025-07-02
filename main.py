@@ -79,10 +79,8 @@ async def show_product(call: types.CallbackQuery):
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
     details = (
-        p['image'] + ' ' + p['name'] + '
-'
-        + 'Цена: ' + str(p['price']) + ' ₸
-'
+        p['image'] + ' ' + p['name'] + ' '
+        + 'Цена: ' + str(p['price']) + ' ₸'
         + p['description']
     )
     kb = types.InlineKeyboardMarkup(row_width=1)
