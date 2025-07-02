@@ -111,8 +111,7 @@ async def about(call: types.CallbackQuery):
 async def contacts(call: types.CallbackQuery):
     await call.answer()
     contact_text = (
-        '📞 +7 (777) 123-45-67
-'
+        '📞 +7 (777) 123-45-67'
         '📧 info@nauryzbay.kz'
     )
     await call.message.edit_text(contact_text)
