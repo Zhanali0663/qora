@@ -18,8 +18,9 @@ DEFAULT_MODEL = 'gpt-4o'
 if not BOT_TOKEN or not LANGDOCKS_API_KEY:
     logger.error("Нет токена бота или Langdocks API")
     exit(1)
+from aiogram.client.default import DefaultBotProperties
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
-bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
 
 # Каталог товаров
