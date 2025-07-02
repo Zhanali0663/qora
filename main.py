@@ -132,4 +132,6 @@ async def ai_chat(message: types.Message):
 
 # Запуск polling
 if __name__ == '__main__':
+    asyncio.run(bot.delete_webhook(drop_pending_updates=True))
     asyncio.run(dp.start_polling(bot))
+
