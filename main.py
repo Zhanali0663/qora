@@ -9,9 +9,9 @@ from aiogram.filters import Command
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Токены
-BOT_TOKEN = 'ТВОЙ_ТОКЕН'
-LANGDOCKS_API_KEY = 'ТВОЙ_LANGDOCKS_API'
+# 💥 ТВОИ РЕАЛЬНЫЕ ТОКЕНЫ (ВСТАВЛЕНЫ ИЗ СТАРОГО КОДА)
+BOT_TOKEN = '7231551217:AAHzc1JUkYETzjRWOXSgG6cftEIE5iCcqLA'
+LANGDOCKS_API_KEY = 'sk-NI_pn5eeqMTM6mQ7VZwDZ1vP2jZqhI7CprARgKPl_jE1iFVhJ-sxg1RCZdp9RQoXrVn7rL7_FJ5AOBpJhBYY9w'
 DEFAULT_MODEL = 'gpt-4o'
 
 # Проверка токенов
