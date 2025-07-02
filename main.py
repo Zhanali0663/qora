@@ -3,14 +3,11 @@ import logging
 import os
 import time
 from datetime import datetime
-from flask import Flask, jsonify, request
+from aiohttp import web, ClientSession
 import aiogram
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Update
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from aiohttp import web
-from aiohttp.web_app import Application
 import openai
 import json
 
@@ -36,9 +33,6 @@ dp = Dispatcher()
 
 # Настройка OpenAI
 openai.api_key = OPENAI_API_KEY
-
-# Flask приложение
-app = Flask(__name__)
 
 # Статистика
 start_time = time.time()
@@ -255,11 +249,10 @@ async def handle_message(message: Message):
             "🛒 У нас есть множество качественных товаров по доступным ценам!"
         )
 
-# Flask маршруты
-@app.route('/')
-def home():
+# Веб-обработчики
+async def home_handler(request):
     uptime = time.time() - start_time
-    return jsonify({
+    return web.json_response({
         "status": "Наурызбай магазин бот работает! 🛒",
         "bot_status": bot_status,
         "webhook_url": WEBHOOK_URL,
@@ -269,32 +262,29 @@ def home():
         "товаров_в_наличии": len(PRODUCTS)
     })
 
-@app.route('/ping')
-def ping():
-    return "pong"
+async def ping_handler(request):
+    return web.Response(text="pong")
 
-@app.route('/health')
-def health():
-    return jsonify({
+async def health_handler(request):
+    return web.json_response({
         "status": "healthy", 
         "bot_status": bot_status,
         "timestamp": datetime.now().isoformat()
     })
 
 # Webhook обработчик
-@app.route(WEBHOOK_PATH, methods=['POST'])
-def webhook():
+async def webhook_handler(request):
     try:
-        update_dict = request.get_json()
+        update_dict = await request.json()
         update = Update(**update_dict)
         
-        # Обрабатываем update асинхронно
-        asyncio.create_task(dp.feed_update(bot, update))
+        # Обрабатываем update
+        await dp.feed_update(bot, update)
         
-        return "OK", 200
+        return web.Response(text="OK")
     except Exception as e:
         logger.error(f"Ошибка webhook: {e}")
-        return "ERROR", 500
+        return web.Response(text="ERROR", status=500)
 
 # Функция для настройки webhook
 async def setup_webhook():
@@ -310,28 +300,50 @@ async def setup_webhook():
         bot_status = f"webhook_error: {e}"
         return False
 
-# Функция для запуска setup_webhook
-def setup_webhook_sync():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        result = loop.run_until_complete(setup_webhook())
-        return result
-    finally:
-        loop.close()
+# Создание приложения
+async def create_app():
+    app = web.Application()
+    
+    # Маршруты
+    app.router.add_get('/', home_handler)
+    app.router.add_get('/ping', ping_handler)
+    app.router.add_get('/health', health_handler)
+    app.router.add_post(WEBHOOK_PATH, webhook_handler)
+    
+    return app
 
-if __name__ == "__main__":
+# Главная функция
+async def main():
     logger.info("🚀 Запуск магазина Наурызбай...")
     
     # Настройка webhook
     logger.info("🔗 Настройка Telegram webhook...")
-    if setup_webhook_sync():
+    if await setup_webhook():
         logger.info("✅ Webhook настроен успешно")
     else:
         logger.error("❌ Не удалось настроить webhook")
     
-    # Запуск Flask сервера
-    port = int(os.environ.get('PORT', 10000))
-    logger.info(f"🌐 Запуск Flask сервера на порту {port}...")
+    # Создание и запуск веб-приложения
+    app = await create_app()
     
-    app.run(host='0.0.0.0', port=port, debug=False)
+    port = int(os.environ.get('PORT', 10000))
+    logger.info(f"🌐 Запуск aiohttp сервера на порту {port}...")
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    
+    logger.info("🎉 Сервер запущен и готов к работе!")
+    
+    # Держим сервер запущенным
+    try:
+        while True:
+            await asyncio.sleep(3600)  # Проверяем каждый час
+    except KeyboardInterrupt:
+        logger.info("🛑 Остановка сервера...")
+    finally:
+        await runner.cleanup()
+
+if __name__ == "__main__":
+    asyncio.run(main())
