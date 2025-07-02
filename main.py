@@ -13,6 +13,7 @@ BOT_TOKEN = "7231551217:AAHzc1JUkYETzjRWOXSgG6cftEIE5iCcqLA"
 LANGDOCKS_API_KEY = "sk-NI_pn5eeqMTM6mQ7VZwDZ1vP2jZqhI7CprARgKPl_jE1iFVhJ-sxg1RCZdp9RQoXrVn7rL7_FJ5AOBpJhBYY9w"
 DEFAULT_MODEL = "gpt-4o"
 
+# Проверка токенов
 if not BOT_TOKEN or not LANGDOCKS_API_KEY:
     logger.error("Не заданы токены бота или LangDocks API!")
     exit(1)
@@ -66,7 +67,8 @@ async def show_catalog(call: types.CallbackQuery):
     await call.answer()
     kb = types.InlineKeyboardMarkup(row_width=1)
     for pid, p in PRODUCTS.items():
-        kb.add(types.InlineKeyboardButton(f"{p['image']} {p['name']} - {p['price']:,} ₸", callback_data=f"product_{pid}"))
+        text = f"{p['image']} {p['name']} - {p['price']:,} ₸"
+        kb.add(types.InlineKeyboardButton(text, callback_data=f"product_{pid}"))
     kb.add(types.InlineKeyboardButton("🔙 Главное меню", callback_data="start"))
     await call.message.edit_text("Каталог товаров:", reply_markup=kb)
 
@@ -76,14 +78,17 @@ async def show_product(call: types.CallbackQuery):
     await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
+    details = (f"{p['image']} {p['name']}
+"
+               f"Цена: {p['price']:,} ₸
+"
+               f"{p['description']}")
     kb = types.InlineKeyboardMarkup(row_width=1)
     kb.add(
         types.InlineKeyboardButton("💰 Купить", callback_data=f"buy_{pid}"),
         types.InlineKeyboardButton("🔙 Каталог", callback_data="catalog")
     )
-    await call.message.edit_text(f"{p['image']} {p['name']"}
-Цена: {p['price']:,} ₸
-{p['description']}", reply_markup=kb)
+    await call.message.edit_text(details, reply_markup=kb)
 
 # Обработка покупки
 @dp.callback_query(lambda c: c.data.startswith('buy_'))
