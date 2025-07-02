@@ -2,159 +2,140 @@ import logging
 import asyncio
 import time
 from datetime import datetime
-from aiohttp import web, ClientSession
-from aiogram import Bot, Dispatcher
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Update
+from aiohttp import ClientSession
+from aiogram import Bot, types
+from aiogram.dispatcher import Dispatcher
+from aiogram.utils.executor import start_webhook
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Жёстко прописанные токены
+# Токены
 BOT_TOKEN = "7231551217:AAHzc1JUkYETzjRWOXSgG6cftEIE5iCcqLA"
 LANGDOCKS_API_KEY = "sk-NI_pn5eeqMTM6mQ7VZwDZ1vP2jZqhI7CprARgKPl_jE1iFVhJ-sxg1RCZdp9RQoXrVn7rL7_FJ5AOBpJhBYY9w"
 DEFAULT_MODEL = "gpt-4o"
-WEBHOOK_URL = "https://telegram-bot-24-7.onrender.com"
+WEBHOOK_HOST = "https://telegram-bot-24-7.onrender.com"
 WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
+WEBHOOK_URL = WEBHOOK_HOST + WEBHOOK_PATH
 
 if not BOT_TOKEN or not LANGDOCKS_API_KEY:
     logger.error("Не заданы токены бота или LangDocks API!")
     exit(1)
 
-# Инициализация бота и диспетчера (aiogram v2)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
 
-# Статистика
+# Статистика и товары
 start_time = time.time()
 message_count = 0
-bot_status = "initialized"
-
-# Словарь товаров
-PRODUCTS = {
+PRODUCTS = {  # все 11 товаров
     "1": {"name": "Смартфон iPhone 15", "price": 350000, "description": "Новейший iPhone с улучшенной камерой", "image": "📱"},
-    "2": {"name": "Ноутбук MacBook Air", "price": 450000, "description": "Легкий и мощный ноутбук для работы", "image": "💻"},
-    "3": {"name": "Наушники AirPods Pro", "price": 120000, "description": "Беспроводные наушники с шумоподавлением", "image": "🎧"},
-    "4": {"name": "Умные часы Apple Watch", "price": 180000, "description": "Стильные часы с множеством функций", "image": "⌚"},
-    "5": {"name": "Планшет iPad Air", "price": 280000, "description": "Универсальный планшет для творчества", "image": "📲"},
-    "6": {"name": "Игровая консоль PlayStation 5", "price": 320000, "description": "Новейшая игровая консоль", "image": "🎮"},
-    "7": {"name": "Кофемашина Nespresso", "price": 85000, "description": "Автоматическая кофемашина", "image": "☕"},
-    "8": {"name": "Пылесос Dyson V15", "price": 220000, "description": "Мощный беспроводной пылесос", "image": "🧹"},
-    "9": {"name": "Электросамокат Xiaomi", "price": 150000, "description": "Удобный транспорт для города", "image": "🛴"},
-    "10": {"name": "Фитнес-браслет Xiaomi Band", "price": 25000, "description": "Отслеживание активности и здоровья", "image": "💪"},
-    "11": {"name": "Беспроводная колонка JBL", "price": 45000, "description": "Портативная колонка с отличным звуком", "image": "🔊"}
+    "2": {"name": "Ноутбук MacBook Air", "price": 450000, "description": "Легкий и мощный ноутбук", "image": "💻"},
+    "3": {"name": "AirPods Pro", "price": 120000, "description": "Беспроводные наушники с шумоподавлением", "image": "🎧"},
+    "4": {"name": "Apple Watch", "price": 180000, "description": "Умные часы с функциями здоровья", "image": "⌚"},
+    "5": {"name": "iPad Air", "price": 280000, "description": "Планшет для творчества", "image": "📲"},
+    "6": {"name": "PlayStation 5", "price": 320000, "description": "Игровая консоль нового поколения", "image": "🎮"},
+    "7": {"name": "Nespresso", "price": 85000, "description": "Кофемашина автоматическая", "image": "☕"},
+    "8": {"name": "Dyson V15", "price": 220000, "description": "Беспроводной пылесос", "image": "🧹"},
+    "9": {"name": "Xiaomi Scooter", "price": 150000, "description": "Электросамокат городской", "image": "🛴"},
+    "10": {"name": "Xiaomi Band", "price": 25000, "description": "Фитнес-браслет", "image": "💪"},
+    "11": {"name": "JBL Speaker", "price": 45000, "description": "Портативная акустика", "image": "🔊"}
 }
 
 async def get_ai_response(messages: list[dict]) -> str:
     url = 'https://api.langdocks.com/v1/chat/completions'
-    headers = {
-        'Authorization': f'Bearer {LANGDOCKS_API_KEY}',
-        'Content-Type': 'application/json'
-    }
-    payload = {
-        'model': DEFAULT_MODEL,
-        'messages': messages,
-        'temperature': 0.7,
-        'max_tokens': 1000,
-    }
+    headers = {'Authorization': f'Bearer {LANGDOCKS_API_KEY}', 'Content-Type': 'application/json'}
+    payload = {'model': DEFAULT_MODEL, 'messages': messages, 'temperature': 0.7, 'max_tokens': 1000}
     async with ClientSession() as session:
         async with session.post(url, json=payload, headers=headers) as resp:
-            text = await resp.text()
             if resp.status != 200:
-                logger.error(f"Ошибка LangDocks {resp.status}: {text}")
+                text = await resp.text()
+                logger.error(f"LangDocks error {resp.status}: {text}")
                 return "Извините, ИИ временно недоступен."
             data = await resp.json()
             return data['choices'][0]['message']['content']
 
-# /start
+# Handlers
 @dp.message_handler(commands=['start'])
-def cmd_start(message: Message):
+async def cmd_start(message: types.Message):
     global message_count
     message_count += 1
-    kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🛒 Каталог", callback_data="catalog")],
-        [InlineKeyboardButton("🤖 ИИ чат", callback_data="ai_chat")],
-        [InlineKeyboardButton("ℹ️ О магазине", callback_data="about")],
-        [InlineKeyboardButton("📞 Контакты", callback_data="contacts")]
-    ])
-    message.answer(f"👋 Привет, {message.from_user.first_name}! Выберите раздел:", reply_markup=kb)
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    kb.add(
+        types.InlineKeyboardButton("🛒 Каталог", callback_data="catalog"),
+        types.InlineKeyboardButton("🤖 ИИ чат", callback_data="ai_chat"),
+        types.InlineKeyboardButton("ℹ️ О магазине", callback_data="about"),
+        types.InlineKeyboardButton("📞 Контакты", callback_data="contacts")
+    )
+    await message.answer(f"Привет, {message.from_user.first_name}! Выберите раздел:", reply_markup=kb)
 
-# Каталог
 @dp.callback_query_handler(lambda c: c.data == 'catalog')
-def show_catalog(call: CallbackQuery):
-    ids = ['1','2','3','4','5','6','7','8','9','10','11']
-    rows = [[InlineKeyboardButton(f"{PRODUCTS[i]['image']} {PRODUCTS[i]['name']} - {PRODUCTS[i]['price']:,} ₸", callback_data=f"product_{i}")] for i in ids]
-    rows.append([InlineKeyboardButton("🔙 Главное", callback_data="start")])
-    kb = InlineKeyboardMarkup(rows)
-    call.message.edit_text("🛒 Каталог товаров:", reply_markup=kb)
+async def show_catalog(call: types.CallbackQuery):
+    await call.answer()
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    for pid, p in PRODUCTS.items():
+        kb.add(types.InlineKeyboardButton(f"{p['image']} {p['name']} - {p['price']:,} ₸", callback_data=f"product_{pid}"))
+    kb.add(types.InlineKeyboardButton("🔙 Главное меню", callback_data="start"))
+    await call.message.edit_text("Каталог товаров:", reply_markup=kb)
 
-# Детали товара
 @dp.callback_query_handler(lambda c: c.data.startswith('product_'))
-def show_product(call: CallbackQuery):
+async def show_product(call: types.CallbackQuery):
+    await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
-    kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💰 Купить", callback_data=f"buy_{pid}" )],
-        [InlineKeyboardButton("🔙 Каталог", callback_data="catalog")]
-    ])
-    call.message.edit_text(f"{p['image']} {p['name']}\nЦена: {p['price']:,} ₸\n{p['description']}", reply_markup=kb)
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    kb.add(
+        types.InlineKeyboardButton("💰 Купить", callback_data=f"buy_{pid}"),
+        types.InlineKeyboardButton("🔙 Каталог", callback_data="catalog")
+    )
+    await call.message.edit_text(f"{p['image']} {p['name']}\nЦена: {p['price']:,} ₸\n{p['description']}", reply_markup=kb)
 
-# Купить
 @dp.callback_query_handler(lambda c: c.data.startswith('buy_'))
-def buy(call: CallbackQuery):
+async def buy_product(call: types.CallbackQuery):
+    await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное", callback_data="start")]])
-    call.message.edit_text(f"✅ Вы купили {p['name']} за {p['price']:,} ₸!", reply_markup=kb)
+    await call.message.edit_text(f"Спасибо за покупку {p['name']} за {p['price']:,} ₸! Мы свяжемся с вами.")
 
-# О магазине
 @dp.callback_query_handler(lambda c: c.data == 'about')
-def about(call: CallbackQuery):
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное", callback_data="start")]])
-    call.message.edit_text("ℹ️ Магазин с 2020, доставка по Казахстану, ИИ круглосуточно", reply_markup=kb)
+async def about(call: types.CallbackQuery):
+    await call.answer()
+    await call.message.edit_text("Магазин с 2020 года. Доставка по Казахстану. ИИ помощник 24/7.")
 
-# Контакты
 @dp.callback_query_handler(lambda c: c.data == 'contacts')
-def contacts(call: CallbackQuery):
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное", callback_data="start")]])
-    call.message.edit_text("📞 +7 (777) 123-45-67\n📧 info@nauryzbay.kz", reply_markup=kb)
+async def contacts(call: types.CallbackQuery):
+    await call.answer()
+    await call.message.edit_text("📞 +7 (777)123-45-67\n📧 info@nauryzbay.kz")
 
-# ИИ чат intro
 @dp.callback_query_handler(lambda c: c.data == 'ai_chat')
-def ai_intro(call: CallbackQuery):
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное", callback_data="start")]])
-    call.message.edit_text("🤖 Напишите сообщение, и ИИ ответит", reply_markup=kb)
+async def ai_intro(call: types.CallbackQuery):
+    await call.answer()
+    await call.message.edit_text("Напишите любое сообщение, и ИИ ответит:")
 
-# Сообщения ИИ
-@dp.message_handler(func=lambda m: True)
-def ai_chat(message: Message):
+@dp.message_handler(lambda m: True)
+async def ai_chat(message: types.Message):
     global message_count
     message_count += 1
-    loop = asyncio.get_event_loop()
-    history = [{"role":"system","content":"Ты ИИ помощник магазина."},{"role":"user","content":message.text}]
-    ai_text = loop.run_until_complete(get_ai_response(history))
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Главное", callback_data="start")]])
-    message.reply(ai_text, reply_markup=kb)
+    await message.chat.do('typing')
+    history = [
+        {"role": "system", "content": "Ты ИИ помощник магазина."},
+        {"role": "user", "content": message.text}
+    ]
+    ai_text = await get_ai_response(history)
+    await message.reply(ai_text)
 
-# Webhook и HTTP
-async def setup_webhook(app):
-    await bot.set_webhook(WEBHOOK_URL + WEBHOOK_PATH)
-    logger.info("Webhook установлен")
-
-async def webhook_handler(request):
-    data = await request.json()
-    update = Update.de_json(data)
-    dp.process_update(update)
-    return web.Response(text="OK")
-
-async def home(request):
-    up = time.time() - start_time
-    return web.json_response({"status":"ok","uptime":round(up,2)})
-
-app = web.Application()
-app.router.add_post(WEBHOOK_PATH, webhook_handler)
-app.router.add_get('/', home)
-app.on_startup.append(setup_webhook)
+# Startup & webhook
+async def on_startup(dp):
+    await bot.set_webhook(WEBHOOK_URL)
+    logger.info("Webhook установлен %s", WEBHOOK_URL)
 
 if __name__ == '__main__':
-    web.run_app(app, host='0.0.0.0', port=int(os.getenv('PORT',10000)))
+    start_webhook(
+        dispatcher=dp,
+        webhook_path=WEBHOOK_PATH,
+        skip_updates=True,
+        on_startup=on_startup,
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', 10000))
+    )
