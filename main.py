@@ -31,8 +31,8 @@ PRODUCTS = {
     "5": {"name": "Планшет iPad Air", "price": 280000, "description": "Универсальный планшет для творчества", "image": "📲"},
     "6": {"name": "Игровая консоль PlayStation 5", "price": 320000, "description": "Новейшая игровая консоль", "image": "🎮"},
     "7": {"name": "Кофемашина Nespresso", "price": 85000, "description": "Автоматическая кофемашина", "image": "☕"},
-    "8": {"name": "Пылесос Dyson V15", "price": 220000, "description": "Мощный беспроводной пылесос", "image": "🧹"},
-    "9": {"name": "Электросамокат Xiaomi", "price": 150000, "description": "Удобный транспорт для города", "image": "🛴"},
+    "8": {"name": "Пылесос Dyson V15", "price": 220000, "description": "Мощный беспроводной пылесос", "image": "🩹"},
+    "9": {"name": "Электросамокат Xiaomi", "price": 150000, "description": "Удобный транспорт для города", "image": "🚴"},
     "10": {"name": "Фитнес-браслет Xiaomi Band", "price": 25000, "description": "Отслеживание активности и здоровья", "image": "💪"},
     "11": {"name": "Беспроводная колонка JBL", "price": 45000, "description": "Портативная колонка с отличным звуком", "image": "🔊"}
 }
@@ -132,6 +132,8 @@ async def ai_chat(message: types.Message):
 
 # Запуск polling
 if __name__ == '__main__':
-    asyncio.run(bot.delete_webhook(drop_pending_updates=True))
-    asyncio.run(dp.start_polling(bot))
+    async def main():
+        await bot.delete_webhook(drop_pending_updates=True)
+        await dp.start_polling(bot)
 
+    asyncio.run(main())
