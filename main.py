@@ -78,18 +78,17 @@ async def show_product(call: types.CallbackQuery):
     await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
-    # Формируем текст деталей без f-строк
     details = (
-        p['image'] + " " + p['name'] + "
-"
-        + "Цена: " + str(p['price']) + " ₸
-"
+        p['image'] + ' ' + p['name'] + '
+'
+        + 'Цена: ' + str(p['price']) + ' ₸
+'
         + p['description']
     )
     kb = types.InlineKeyboardMarkup(row_width=1)
     kb.add(
-        types.InlineKeyboardButton("💰 Купить", callback_data=f"buy_{pid}"),
-        types.InlineKeyboardButton("🔙 Каталог", callback_data="catalog")
+        types.InlineKeyboardButton('💰 Купить', callback_data=f'buy_{pid}'),
+        types.InlineKeyboardButton('🔙 Каталог', callback_data='catalog')
     )
     await call.message.edit_text(details, reply_markup=kb)
 
@@ -113,10 +112,12 @@ async def about(call: types.CallbackQuery):
 @dp.callback_query(lambda c: c.data == 'contacts')
 async def contacts(call: types.CallbackQuery):
     await call.answer()
-    await call.message.edit_text(
-        "📞 +7 (777) 123-45-67
-📧 info@nauryzbay.kz"
+    contact_text = (
+        '📞 +7 (777) 123-45-67
+'
+        '📧 info@nauryzbay.kz'
     )
+    await call.message.edit_text(contact_text)
 
 # ИИ чат
 @dp.callback_query(lambda c: c.data == 'ai_chat')
