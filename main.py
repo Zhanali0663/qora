@@ -52,13 +52,15 @@ def get_ai_response(messages: list[dict]) -> str:
 # Команда /start
 @dp.message(Command('start'))
 async def cmd_start(message: types.Message):
-    kb = types.InlineKeyboardMarkup(row_width=1)
-    kb.add(
-        types.InlineKeyboardButton("🛒 Каталог", callback_data="catalog"),
-        types.InlineKeyboardButton("🤖 ИИ чат", callback_data="ai_chat"),
-        types.InlineKeyboardButton("ℹ️ О магазине", callback_data="about"),
-        types.InlineKeyboardButton("📞 Контакты", callback_data="contacts")
-    )
+    kb = types.InlineKeyboardMarkup(
+    inline_keyboard=[
+        [types.InlineKeyboardButton(text="🛒 Каталог", callback_data="catalog")],
+        [types.InlineKeyboardButton(text="🤖 ИИ чат", callback_data="ai_chat")],
+        [types.InlineKeyboardButton(text="ℹ️ О магазине", callback_data="about")],
+        [types.InlineKeyboardButton(text="📞 Контакты", callback_data="contacts")]
+    ]
+)
+
     await message.answer(f"Привет, {message.from_user.first_name}! Выберите раздел:", reply_markup=kb)
 
 # Показать каталог
