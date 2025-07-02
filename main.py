@@ -3,13 +3,16 @@ import logging
 import os
 import time
 from datetime import datetime
-from flask import Flask, jsonify
-from threading import Thread
+from flask import Flask, jsonify, request
 import aiogram
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Update
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiohttp import web
+from aiohttp.web_app import Application
 import openai
+import json
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -40,7 +43,11 @@ app = Flask(__name__)
 # Статистика
 start_time = time.time()
 message_count = 0
-bot_status = "starting"
+bot_status = "initialized"
+
+# URL для webhook
+WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
+WEBHOOK_URL = f"https://telegram-bot-24-7.onrender.com{WEBHOOK_PATH}"
 
 # База данных товаров
 PRODUCTS = {
@@ -255,6 +262,7 @@ def home():
     return jsonify({
         "status": "Наурызбай магазин бот работает! 🛒",
         "bot_status": bot_status,
+        "webhook_url": WEBHOOK_URL,
         "uptime_seconds": round(uptime, 2),
         "uptime_hours": round(uptime / 3600, 2),
         "messages_processed": message_count,
@@ -273,40 +281,54 @@ def health():
         "timestamp": datetime.now().isoformat()
     })
 
-# Функция для запуска бота (БЕЗ потоков)
-async def start_bot():
+# Webhook обработчик
+@app.route(WEBHOOK_PATH, methods=['POST'])
+def webhook():
+    try:
+        update_dict = request.get_json()
+        update = Update(**update_dict)
+        
+        # Обрабатываем update асинхронно
+        asyncio.create_task(dp.feed_update(bot, update))
+        
+        return "OK", 200
+    except Exception as e:
+        logger.error(f"Ошибка webhook: {e}")
+        return "ERROR", 500
+
+# Функция для настройки webhook
+async def setup_webhook():
     global bot_status
     try:
-        logger.info("🤖 Запуск Telegram бота Наурызбай...")
-        bot_status = "running"
-        await dp.start_polling(bot)
+        logger.info(f"🔗 Настройка webhook: {WEBHOOK_URL}")
+        await bot.set_webhook(url=WEBHOOK_URL)
+        bot_status = "webhook_active"
+        logger.info("✅ Webhook успешно настроен!")
+        return True
     except Exception as e:
-        logger.error(f"Ошибка в боте: {e}")
-        bot_status = f"error: {e}"
+        logger.error(f"❌ Ошибка настройки webhook: {e}")
+        bot_status = f"webhook_error: {e}"
+        return False
 
-# Функция для запуска в фоновом режиме
-def run_bot_background():
+# Функция для запуска setup_webhook
+def setup_webhook_sync():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        # Создаем и запускаем event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(start_bot())
-    except Exception as e:
-        logger.error(f"Критическая ошибка бота: {e}")
-        global bot_status
-        bot_status = f"critical_error: {e}"
+        result = loop.run_until_complete(setup_webhook())
+        return result
+    finally:
+        loop.close()
 
 if __name__ == "__main__":
     logger.info("🚀 Запуск магазина Наурызбай...")
     
-    # Запуск бота в отдельном потоке (исправленный способ)
-    bot_thread = Thread(target=run_bot_background, daemon=True)
-    bot_thread.start()
-    
-    logger.info("✅ Бот Наурызбай запущен в фоновом потоке")
-    
-    # Небольшая задержка для инициализации бота
-    time.sleep(2)
+    # Настройка webhook
+    logger.info("🔗 Настройка Telegram webhook...")
+    if setup_webhook_sync():
+        logger.info("✅ Webhook настроен успешно")
+    else:
+        logger.error("❌ Не удалось настроить webhook")
     
     # Запуск Flask сервера
     port = int(os.environ.get('PORT', 10000))
