@@ -81,7 +81,7 @@ async def show_product(call: types.CallbackQuery):
         types.InlineKeyboardButton("💰 Купить", callback_data=f"buy_{pid}"),
         types.InlineKeyboardButton("🔙 Каталог", callback_data="catalog")
     )
-    await call.message.edit_text(f"{p['image']} {p['name']}
+    await call.message.edit_text(f"{p['image']} {p['name']"}
 Цена: {p['price']:,} ₸
 {p['description']}", reply_markup=kb)
 
