@@ -2,14 +2,13 @@ import asyncio
 import logging
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from flask import Flask, jsonify
 from threading import Thread
 import aiogram
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from aiogram.handlers import MessageHandler, CallbackQueryHandler
 import openai
 
 # Настройка логирования
@@ -41,6 +40,7 @@ app = Flask(__name__)
 # Статистика
 start_time = time.time()
 message_count = 0
+bot_status = "starting"
 
 # База данных товаров
 PRODUCTS = {
@@ -254,6 +254,7 @@ def home():
     uptime = time.time() - start_time
     return jsonify({
         "status": "Наурызбай магазин бот работает! 🛒",
+        "bot_status": bot_status,
         "uptime_seconds": round(uptime, 2),
         "uptime_hours": round(uptime / 3600, 2),
         "messages_processed": message_count,
@@ -266,36 +267,46 @@ def ping():
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    return jsonify({
+        "status": "healthy", 
+        "bot_status": bot_status,
+        "timestamp": datetime.now().isoformat()
+    })
 
-# Функция для запуска бота
+# Функция для запуска бота (БЕЗ потоков)
 async def start_bot():
+    global bot_status
     try:
         logger.info("🤖 Запуск Telegram бота Наурызбай...")
+        bot_status = "running"
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Ошибка в боте: {e}")
+        bot_status = f"error: {e}"
 
-def run_bot():
-    # Создаем новый event loop для потока
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+# Функция для запуска в фоновом режиме
+def run_bot_background():
     try:
+        # Создаем и запускаем event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         loop.run_until_complete(start_bot())
     except Exception as e:
-        logger.error(f"Ошибка в потоке бота: {e}")
-    finally:
-        loop.close()
+        logger.error(f"Критическая ошибка бота: {e}")
+        global bot_status
+        bot_status = f"critical_error: {e}"
 
 if __name__ == "__main__":
     logger.info("🚀 Запуск магазина Наурызбай...")
     
-    # Запуск бота в отдельном потоке
-    bot_thread = Thread(target=run_bot)
-    bot_thread.daemon = True
+    # Запуск бота в отдельном потоке (исправленный способ)
+    bot_thread = Thread(target=run_bot_background, daemon=True)
     bot_thread.start()
     
     logger.info("✅ Бот Наурызбай запущен в фоновом потоке")
+    
+    # Небольшая задержка для инициализации бота
+    time.sleep(2)
     
     # Запуск Flask сервера
     port = int(os.environ.get('PORT', 10000))
