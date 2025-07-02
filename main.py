@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import time
-from datetime import datetime
+import os
 from aiohttp import ClientSession
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = "7231551217:AAHzc1JUkYETzjRWOXSgG6cftEIE5iCcqLA"
 LANGDOCKS_API_KEY = "sk-NI_pn5eeqMTM6mQ7VZwDZ1vP2jZqhI7CprARgKPl_jE1iFVhJ-sxg1RCZdp9RQoXrVn7rL7_FJ5AOBpJhBYY9w"
 DEFAULT_MODEL = "gpt-4o"
-WEBHOOK_HOST = "https://telegram-bot-24-7.onrender.com"
+WEBHOOK_HOST = os.getenv('WEBHOOK_HOST', 'https://telegram-bot-24-7.onrender.com')
 WEBHOOK_PATH = f"/webhook/{BOT_TOKEN}"
 WEBHOOK_URL = WEBHOOK_HOST + WEBHOOK_PATH
 
@@ -29,7 +29,7 @@ dp = Dispatcher(bot)
 # Статистика и товары
 start_time = time.time()
 message_count = 0
-PRODUCTS = {  # все 11 товаров
+PRODUCTS = {
     "1": {"name": "Смартфон iPhone 15", "price": 350000, "description": "Новейший iPhone с улучшенной камерой", "image": "📱"},
     "2": {"name": "Ноутбук MacBook Air", "price": 450000, "description": "Легкий и мощный ноутбук", "image": "💻"},
     "3": {"name": "AirPods Pro", "price": 120000, "description": "Беспроводные наушники с шумоподавлением", "image": "🎧"},
@@ -38,7 +38,7 @@ PRODUCTS = {  # все 11 товаров
     "6": {"name": "PlayStation 5", "price": 320000, "description": "Игровая консоль нового поколения", "image": "🎮"},
     "7": {"name": "Nespresso", "price": 85000, "description": "Кофемашина автоматическая", "image": "☕"},
     "8": {"name": "Dyson V15", "price": 220000, "description": "Беспроводной пылесос", "image": "🧹"},
-    "9": {"name": "Xiaomi Scooter", "price": 150000, "description": "Электросамокат городской", "image": "🛴"},
+    "9": {"name": "Electrosamokat Xiaomi", "price": 150000, "description": "Электросамокат городской", "image": "🛴"},
     "10": {"name": "Xiaomi Band", "price": 25000, "description": "Фитнес-браслет", "image": "💪"},
     "11": {"name": "JBL Speaker", "price": 45000, "description": "Портативная акустика", "image": "🔊"}
 }
