@@ -78,11 +78,14 @@ async def show_product(call: types.CallbackQuery):
     await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
-    details = (f"{p['image']} {p['name']}
+    # Формируем текст деталей с переносами строк
+    details = (
+        f"{p['image']} {p['name']}
 "
-               f"Цена: {p['price']:,} ₸
+        f"Цена: {p['price']:,} ₸
 "
-               f"{p['description']}")
+        f"{p['description']}"
+    )
     kb = types.InlineKeyboardMarkup(row_width=1)
     kb.add(
         types.InlineKeyboardButton("💰 Купить", callback_data=f"buy_{pid}"),
