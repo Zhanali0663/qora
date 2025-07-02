@@ -78,13 +78,13 @@ async def show_product(call: types.CallbackQuery):
     await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
-    # Формируем текст деталей с newline-символами
+    # Формируем текст деталей без f-строк
     details = (
-        f"{p['image']} {p['name']}
+        p['image'] + " " + p['name'] + "
 "
-        f"Цена: {p['price']:,} ₸
+        + "Цена: " + str(p['price']) + " ₸
 "
-        f"{p['description']}"
+        + p['description']
     )
     kb = types.InlineKeyboardMarkup(row_width=1)
     kb.add(
