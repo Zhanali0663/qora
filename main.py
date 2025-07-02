@@ -67,8 +67,8 @@ async def show_catalog(call: types.CallbackQuery):
     await call.answer()
     kb = types.InlineKeyboardMarkup(row_width=1)
     for pid, p in PRODUCTS.items():
-        text = f"{p['image']} {p['name']} - {p['price']:,} ₸"
-        kb.add(types.InlineKeyboardButton(text, callback_data=f"product_{pid}"))
+        kb.add(types.InlineKeyboardButton(
+            f"{p['image']} {p['name']} - {p['price']:,} ₸", callback_data=f"product_{pid}"))
     kb.add(types.InlineKeyboardButton("🔙 Главное меню", callback_data="start"))
     await call.message.edit_text("Каталог товаров:", reply_markup=kb)
 
@@ -78,15 +78,13 @@ async def show_product(call: types.CallbackQuery):
     await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
-    details = (
-        p['image'] + ' ' + p['name'] + ' '
-        + 'Цена: ' + str(p['price']) + ' ₸'
-        + p['description']
-    )
+    details = f"""{p['image']} {p['name']}
+Цена: {p['price']:,} ₸
+{p['description']}"""
     kb = types.InlineKeyboardMarkup(row_width=1)
     kb.add(
-        types.InlineKeyboardButton('💰 Купить', callback_data=f'buy_{pid}'),
-        types.InlineKeyboardButton('🔙 Каталог', callback_data='catalog')
+        types.InlineKeyboardButton("💰 Купить", callback_data=f"buy_{pid}"),
+        types.InlineKeyboardButton("🔙 Каталог", callback_data="catalog")
     )
     await call.message.edit_text(details, reply_markup=kb)
 
@@ -96,7 +94,9 @@ async def buy_product(call: types.CallbackQuery):
     await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
-    await call.message.edit_text(f"Спасибо за покупку {p['name']} за {p['price']:,} ₸! Мы свяжемся с вами.")
+    await call.message.edit_text(
+        f"Спасибо за покупку {p['name']} за {p['price']:,} ₸! Мы свяжемся с вами."
+    )
 
 # О магазине
 @dp.callback_query(lambda c: c.data == 'about')
@@ -110,10 +110,8 @@ async def about(call: types.CallbackQuery):
 @dp.callback_query(lambda c: c.data == 'contacts')
 async def contacts(call: types.CallbackQuery):
     await call.answer()
-    contact_text = (
-        '📞 +7 (777) 123-45-67'
-        '📧 info@nauryzbay.kz'
-    )
+    contact_text = """📞 +7 (777) 123-45-67
+📧 info@nauryzbay.kz"""
     await call.message.edit_text(contact_text)
 
 # ИИ чат
