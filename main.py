@@ -78,7 +78,7 @@ async def show_product(call: types.CallbackQuery):
     await call.answer()
     pid = call.data.split('_')[1]
     p = PRODUCTS[pid]
-    # Формируем текст деталей с переносами строк
+    # Формируем текст деталей с newline-символами
     details = (
         f"{p['image']} {p['name']}
 "
@@ -105,14 +105,18 @@ async def buy_product(call: types.CallbackQuery):
 @dp.callback_query(lambda c: c.data == 'about')
 async def about(call: types.CallbackQuery):
     await call.answer()
-    await call.message.edit_text("Магазин работает с 2020 года. Доставка по всему Казахстану. ИИ помощник отвечает 24/7.")
+    await call.message.edit_text(
+        "Магазин работает с 2020 года. Доставка по всему Казахстану. ИИ помощник отвечает 24/7."
+    )
 
 # Контакты
 @dp.callback_query(lambda c: c.data == 'contacts')
 async def contacts(call: types.CallbackQuery):
     await call.answer()
-    await call.message.edit_text("📞 +7 (777) 123-45-67
-📧 info@nauryzbay.kz")
+    await call.message.edit_text(
+        "📞 +7 (777) 123-45-67
+📧 info@nauryzbay.kz"
+    )
 
 # ИИ чат
 @dp.callback_query(lambda c: c.data == 'ai_chat')
